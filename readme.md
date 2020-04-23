@@ -2,30 +2,38 @@
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ## Prerequisites
 
-What things you need to install the software and how to install them
+GNU GCC should be available on the system. With a bit of labour this can also be compiled with Visual Studio.
+
+## Building
+
+Build the tool using the shell script provided:
 
 ```
-Give examples
+./build.sh
 ```
-
-## Installing
-
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
+If this fails due to privileges, make the script executable and run again:
 
 ```
-Give the example
+sudo chmod 777 build.sh
 ```
 
-And repeat
+## Running
+
+The default name of the executable is ``` dpss ```. Run it with the following command:
 
 ```
-until finished
+mkdir output
+./dpss -file ./resources/bigfile.txt -key testpassword1234 -out ./output/bigfile.enc
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+The following options can be specified:
+
+    - ```-file <filename>``` - the name of the input file (mandatory)
+    - ```-key <password>``` - the encryption key (mandatory)
+    - ```-out <filenme>``` - the name of the output file
+    - ```-verbose``` - show more output
+

@@ -169,10 +169,9 @@ int main(int argc, char * argv[]) {
 		#pragma omp parallel
 		#pragma omp for
 		for (int i = 0; i < CORES; i++){
-			if (i * chunkSize >= size) {
-				break;
+			if (i * chunkSize <= size) {
+			    AES_ECB_encrypt(input + (i * chunkSize), key, output + (i * chunkSize), chunkSize);
 			}
-			AES_ECB_encrypt(input + (i * chunkSize), key, output + (i * chunkSize), chunkSize);
 		}
 		end = clock();
 		delta = end - start;
