@@ -32,8 +32,8 @@ mkdir output
 
 The following options can be specified:
 
-    - ```-file <filename>``` - the name of the input file (mandatory)
-    - ```-key <password>``` - the encryption key (mandatory)
-    - ```-out <filenme>``` - the name of the output file
-    - ```-verbose``` - show more output
+- ```-file <filename>``` - the name of the input file (mandatory)
+- ```-key <password>``` - the encryption key (mandatory)
+- ```-out <filenme>``` - the name of the output file
+- ```-verbose``` - show more output
 
