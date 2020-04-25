@@ -4,7 +4,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <omp.h>
 
 #define ECB 1
 
@@ -155,7 +157,7 @@ int main(int argc, char * argv[]) {
 		AES_ECB_encrypt(input, key, output, size);
 		end = clock();
 		delta = end - start;
-		printf("Sequential took %d ms.", delta); printf(CRLF);
+		printf("Sequential took %ld ms.", delta); printf(CRLF);
 
 		zeroArray(output, size);
 		zeroArray(output2, size);
@@ -175,7 +177,7 @@ int main(int argc, char * argv[]) {
 		}
 		end = clock();
 		delta = end - start;
-		printf("Parallel took %d ms.", delta); printf(CRLF);
+		printf("Parallel took %ld ms.", delta); printf(CRLF);
 
 		// Logging and verification
 		if (verbose == 1) {
@@ -188,7 +190,7 @@ int main(int argc, char * argv[]) {
 		}
 		end = clock();
 		delta = end - start;
-		printf("Writing took %d ms.", delta); printf(CRLF);
+		printf("Writing took %ld ms.", delta); printf(CRLF);
 
 		AES_ECB_decrypt(output, key, output2, size);
 
