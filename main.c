@@ -17,7 +17,7 @@
 #define TAB "\t"
 #define CORES 4
 
-int parseArgs(int argc, char* argv[], char ** fileName, char ** key, char ** outFileName, int * verbose) {
+int parseArgs(int argc, char* argv[], char ** fileName, char ** key, char ** outFileName, int * verbose, int * openmpi) {
 	for (int i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "-file") == 0) {
 			if ((argv[i + 1] != NULL) && strlen(argv[i + 1]) > 0) {
@@ -36,7 +36,9 @@ int parseArgs(int argc, char* argv[], char ** fileName, char ** key, char ** out
 			}
 		} else if (strcmp(argv[i], "-verbose") == 0) {
 			*verbose = 1;
-		}
+		} else if (strcmp(argv[i], "-openmpi") == 0){
+                        *openmpi = 1;
+                }
 	}
 	if (*fileName != NULL && *key != NULL) {
 		return 0;
@@ -103,6 +105,7 @@ void writeFile(char * fileName, uint8_t* input, int size, char * format) {
 	fclose(file);
 }
 
+
 //
 // Mandatory arguments: 
 // -key <password> - the password used to encrypt the text file 
@@ -111,16 +114,18 @@ void writeFile(char * fileName, uint8_t* input, int size, char * format) {
 // 
 // Optional arguments: 
 // -verbose - see additional output
-//
+// -openmpi - run using openMpi 
+// 
 int main(int argc, char * argv[]) {
 
 	char * fileName = NULL;
 	char * charKey = NULL;
 	char * outFileName = NULL;
 	int verbose = 0;
-
+        int openmpi = 0;
 	
-	int success = parseArgs(argc, argv, &fileName, &charKey, &outFileName, &verbose);
+	int success = 
+            parseArgs(argc, argv, &fileName, &charKey, &outFileName, &verbose, &openmpi);
 
 	if (success < 0) {
 		printf("Invalid parameters passed.");
@@ -132,52 +137,62 @@ int main(int argc, char * argv[]) {
 	
 	if (input != NULL) {
 		
-		clock_t start, end, delta;
+	    clock_t start, end, delta;
 
-		if (verbose == 1) {
+            if (verbose == 1) {
 			printf("Size=%d", size); printf(CRLF);
 			printf("Input"); printf(CRLF);
 			printArray(input, size, "%c");
-		}
+            }
 
-		uint8_t* key = makeKey(charKey);
+	    uint8_t* key = makeKey(charKey);
 
-		if (verbose == 1) {
-			printf("Key"); printf(CRLF);
-			printArray(key, 16, "%c");
-		}
+	    if (verbose == 1) {
+		printf("Key"); printf(CRLF);
+		printArray(key, 16, "%c");
+            }
 
-		uint8_t* output = (uint8_t*)malloc(size  * sizeof(uint8_t));
-		uint8_t* output2 = (uint8_t*)malloc(size * sizeof(uint8_t));
-		zeroArray(output, size);
-		zeroArray(output2, size);
+	    uint8_t* output = (uint8_t*)malloc(size  * sizeof(uint8_t));
+	    uint8_t* output2 = (uint8_t*)malloc(size * sizeof(uint8_t));
+	    zeroArray(output, size);
+	    zeroArray(output2, size);
+	    
+            if(openmpi == 0){
+		    // Sequential
+		    start = clock();
+		    AES_ECB_encrypt(input, key, output, size);
+		    end = clock();
+		    delta = end - start;
+		    printf("Sequential took %ld ms.", delta); printf(CRLF);
 
-		// Sequential
-		start = clock();
-		AES_ECB_encrypt(input, key, output, size);
-		end = clock();
-		delta = end - start;
-		printf("Sequential took %ld ms.", delta); printf(CRLF);
+		    zeroArray(output, size);
+		    zeroArray(output2, size);
 
-		zeroArray(output, size);
-		zeroArray(output2, size);
-
-		// Parallel
-		int chunkSize = size / CORES;
-		if (chunkSize < 16) {
+		    // Parallel
+		    int chunkSize = size / CORES;
+		    if (chunkSize < 16) {
 			chunkSize = 16;
-		}
-		start = clock();
-		#pragma omp parallel
-		#pragma omp for
-		for (int i = 0; i < CORES; i++){
+		    }
+		    start = clock();
+		    #pragma omp parallel
+		    #pragma omp for
+		    for (int i = 0; i < CORES; i++){
 			if (i * chunkSize <= size) {
 			    AES_ECB_encrypt(input + (i * chunkSize), key, output + (i * chunkSize), chunkSize);
 			}
+		    }
+		    end = clock();
+		    delta = end - start;
+		    printf("Parallel took %ld ms.", delta); printf(CRLF);
 		}
-		end = clock();
-		delta = end - start;
-		printf("Parallel took %ld ms.", delta); printf(CRLF);
+		if(openmpi == 1){
+                    // Open MPI
+		    start = clock();
+		    AES_ECB_encrypt(input, key, output, size);
+		    end = clock();
+		    delta = end - start;
+		    printf("OpenMpi took %ld ms.", delta); printf(CRLF);
+                }
 
 		// Logging and verification
 		if (verbose == 1) {
@@ -201,3 +216,4 @@ int main(int argc, char * argv[]) {
 		return 0;
 	}
 }
+                
