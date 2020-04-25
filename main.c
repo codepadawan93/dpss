@@ -7,11 +7,14 @@
 #include <string.h>
 #include <time.h>
 #include <omp.h>
+#if __has_include(<mpi.h>)
+    #define _IS_MPI 1
+    #include <mpi.h>
+#endif
 
 #define ECB 1
 
 #include "aes.h"
-
 
 #define CRLF "\r\n"
 #define TAB "\t"
@@ -107,15 +110,15 @@ void writeFile(char * fileName, uint8_t* input, int size, char * format) {
 
 
 //
-// Mandatory arguments: 
-// -key <password> - the password used to encrypt the text file 
+// Mandatory arguments:
+// -key <password> - the password used to encrypt the text file
 // -file <in file name> - input file name, has to be a text file
 // -out <out file name> - output file name
-// 
-// Optional arguments: 
+//
+// Optional arguments:
 // -verbose - see additional output
-// -openmpi - run using openMpi 
-// 
+// -openmpi - run using openMpi
+//
 int main(int argc, char * argv[]) {
 
 	char * fileName = NULL;
@@ -123,7 +126,7 @@ int main(int argc, char * argv[]) {
 	char * outFileName = NULL;
 	int verbose = 0;
         int openmpi = 0;
-	
+
 	int success = 
             parseArgs(argc, argv, &fileName, &charKey, &outFileName, &verbose, &openmpi);
 
@@ -134,9 +137,9 @@ int main(int argc, char * argv[]) {
 
 	int size = 0;
 	uint8_t* input = readFile(fileName, &size);
-	
+
 	if (input != NULL) {
-		
+
 	    clock_t start, end, delta;
 
             if (verbose == 1) {
@@ -156,7 +159,7 @@ int main(int argc, char * argv[]) {
 	    uint8_t* output2 = (uint8_t*)malloc(size * sizeof(uint8_t));
 	    zeroArray(output, size);
 	    zeroArray(output2, size);
-	    
+
             if(openmpi == 0){
 		    // Sequential
 		    start = clock();
@@ -187,12 +190,25 @@ int main(int argc, char * argv[]) {
 		}
 		if(openmpi == 1){
                     // Open MPI
-		    start = clock();
-		    AES_ECB_encrypt(input, key, output, size);
-		    end = clock();
+		    #ifndef _IS_MPI
+                    printf("OpenMpi not supported."); printf(CRLF);
+                    #else
+                    MPI_Init(NULL, NULL);
+                    int wSize, rank;
+                    MPI_Comm_size(MPI_COMM_WORLD, &wSize);
+                    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+                    int elementsPerProc = size / wSize;
+                    uint8_t * sub = (uint8_t *)malloc(sizeof(uint8_t) * elementsPerProc);
+                    MPI_Scatter(input, elementsPerProc, MPI_INT, sub, elementsPerProc, MPI_INT, 0, MPI_COMM_WORLD);
+                    start = clock();
+		    AES_ECB_encrypt(input + (rank * elementsPerProc), key, sub, elementsPerProc);
+                    MPI_Gather(&sub, elementsPerProc, MPI_INT, output + (rank * elementsPerProc), elementsPerProc, MPI_INT, 0, MPI_COMM_WORLD);
+                    end = clock();
 		    delta = end - start;
 		    printf("OpenMpi took %ld ms.", delta); printf(CRLF);
-                }
+                    MPI_Finalize();
+                    #endif
+               }
 
 		// Logging and verification
 		if (verbose == 1) {
@@ -216,4 +232,4 @@ int main(int argc, char * argv[]) {
 		return 0;
 	}
 }
-                
+
