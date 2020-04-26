@@ -90,7 +90,7 @@ uint8_t* readFile(char * fileName, int * size) {
 		fscanf(file, "%c", &(result[i]));
 	}
 	for (int i = *size; i < *size + padding; i++) {
-		result[i] = (uint8_t)0x00;
+		result[i] = (uint8_t)padding;
 	}
 	*size += padding;
 	fclose(file);
