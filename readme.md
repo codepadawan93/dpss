@@ -23,11 +23,22 @@ sudo chmod 777 build.sh
 
 ## Running
 
-The default name of the executable is ``` dpss ```. Run it with the following command:
+Make sure the ``` output ``` directory exists:
 
 ```
 mkdir output
+```
+
+The default name of the normal executable is ``` dpss ```. Run it with the following command:
+
+```
 ./dpss -file ./resources/bigfile.txt -key testpassword1234 -out ./output/bigfile.enc
+```
+
+The default name of the MPI executable is ``` mpidpss ```. Run it with the following command:
+
+```
+mpirun -np 2 ./mpidpss -file ./resources/testfile.txt -key testpassword1234 -out ./output/testfile_mpi.enc -openmpi
 ```
 
 ## Running tests

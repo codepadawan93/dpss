@@ -18,6 +18,7 @@
 
 #define CRLF "\r\n"
 #define TAB "\t"
+#define AES_BLOCK_SIZE 16
 #define CORES 4
 
 int parseArgs(int argc, char* argv[], char ** fileName, char ** key, char ** outFileName, int * verbose, int * openmpi) {
@@ -83,7 +84,7 @@ uint8_t* readFile(char * fileName, int * size) {
 	fseek(file, 0, SEEK_END);
 	*size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	int padding = (*size) % 16;
+	int padding = (*size) % AES_BLOCK_SIZE;
 	result = (uint8_t*)malloc((*size + padding) * sizeof(uint8_t));
 	for (int i = 0; i < *size + 1; i++) {
 		fscanf(file, "%c", &(result[i]));
@@ -154,7 +155,7 @@ int main(int argc, char * argv[]) {
 
 	    if (verbose == 1) {
 			printf("Key"); printf(CRLF);
-			printArray(key, 16, "%c");
+			printArray(key, AES_BLOCK_SIZE, "%c");
         }
 
 	    uint8_t* output = (uint8_t*)malloc(size  * sizeof(uint8_t));
@@ -175,8 +176,8 @@ int main(int argc, char * argv[]) {
 
 		    // Parallel
 		    int chunkSize = size / CORES;
-		    if (chunkSize < 16) {
-				chunkSize = 16;
+		    if (chunkSize < AES_BLOCK_SIZE) {
+				chunkSize = AES_BLOCK_SIZE;
 		    }
 		    start = clock();
 		    #pragma omp parallel
@@ -199,13 +200,16 @@ int main(int argc, char * argv[]) {
                 MPI_Comm_size(MPI_COMM_WORLD, &wSize);
                 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
                 int elementsPerProc = size / wSize;
-                uint8_t * sub = (uint8_t *)malloc(elementsPerProc * sizeof(uint8_t));
+				while(elementsPerProc % AES_BLOCK_SIZE != 0){
+					elementsPerProc++;
+				}
+                uint8_t * tempBuffer = (uint8_t *)malloc(elementsPerProc * sizeof(uint8_t));
                 start = clock();
-				MPI_Scatter(input, elementsPerProc, MPI_CHAR, 
-							sub, elementsPerProc, MPI_CHAR, 0, MPI_COMM_WORLD);
-		    	AES_ECB_encrypt(input + (rank * elementsPerProc), key, sub, elementsPerProc);
-                MPI_Gather(&sub, elementsPerProc, MPI_CHAR, 
-							output + (rank * elementsPerProc), elementsPerProc, MPI_CHAR, 0, MPI_COMM_WORLD);
+				MPI_Scatter(input, elementsPerProc, MPI_UNSIGNED_CHAR, 
+							tempBuffer, elementsPerProc, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+		    	AES_ECB_encrypt(input + (rank * elementsPerProc), key, tempBuffer, elementsPerProc);
+                MPI_Gather(tempBuffer, elementsPerProc, MPI_UNSIGNED_CHAR, 
+							output + (rank * elementsPerProc), elementsPerProc, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
                 end = clock();
 				delta = end - start;
 		    	printf("OpenMpi took %ld ms.", delta); printf(CRLF);
