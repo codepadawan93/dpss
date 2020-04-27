@@ -41,13 +41,6 @@ The default name of the MPI executable is ``` mpidpss ```. Run it with the follo
 mpirun -np 2 ./mpidpss -file ./resources/testfile.txt -key testpassword1234 -out ./output/testfile_mpi.enc -openmpi
 ```
 
-## Running tests
-
-Run the (very basic) tests like this:
-```
-./test.sh
-```
-
 The following options can be specified:
 
 - ```-file <filename>``` - the name of the input file (mandatory)
@@ -55,3 +48,10 @@ The following options can be specified:
 - ```-out <filenme>``` - the name of the output file
 - ```-verbose``` - show more output
 - ```-openmpi``` - run the OpenMpi code
+
+## Running tests
+
+Run the (very basic) tests like this:
+```
+./test.sh
+```
